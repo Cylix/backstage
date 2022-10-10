@@ -5646,6 +5646,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@backstage/plugin-github-pull-requests-board@workspace:plugins/github-pull-requests-board"
   dependencies:
+    "@backstage/catalog-client": "workspace:^"
     "@backstage/catalog-model": "workspace:^"
     "@backstage/cli": "workspace:^"
     "@backstage/core-components": "workspace:^"

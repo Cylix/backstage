@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 import React, { useState } from 'react';
+import useAsync from 'react-use/lib/useAsync';
 import { Grid, Typography } from '@material-ui/core';
 import PeopleIcon from '@material-ui/icons/People';
+
+import { useApi } from '@backstage/core-plugin-api';
+import { catalogApiRef, useEntity } from '@backstage/plugin-catalog-react';
 import { Progress, InfoCard } from '@backstage/core-components';
 
 import { InfoCardHeader } from '../InfoCardHeader';
 import { PullRequestBoardOptions } from '../PullRequestBoardOptions';
 import { Wrapper } from '../Wrapper';
 import { PullRequestCard } from '../PullRequestCard';
-import { usePullRequestsByTeam } from '../../hooks/usePullRequestsByTeam';
 import { PRCardFormating } from '../../utils/types';
 import { shouldDisplayCard } from '../../utils/functions';
 import { DraftPrIcon } from '../icons/DraftPr';
-import { useUserRepositoriesAndTeam } from '../../hooks/useUserRepositoriesAndTeam';
+import { getPullRequestsByTeam } from '../../hooks/getPullRequestsByTeam';
+import { getUserRepositoriesAndTeam } from '../../hooks/getUserRepositoriesAndTeam';
+import { useOctokitGraphQl } from '../../api/useOctokitGraphQl';
 
 /** @public */
 export interface EntityTeamPullRequestsContentProps {
@@ -38,22 +43,35 @@ const EntityTeamPullRequestsContent = (
 ) => {
   const { pullRequestLimit } = props;
   const [infoCardFormat, setInfoCardFormat] = useState<PRCardFormating[]>([]);
-  const {
-    loading: loadingReposAndTeam,
-    repositories,
-    teamMembers,
-    teamMembersOrganization,
-  } = useUserRepositoriesAndTeam();
-  const {
-    loading: loadingPRs,
-    pullRequests,
-    refreshPullRequests,
-  } = usePullRequestsByTeam(
-    repositories,
-    teamMembers,
-    teamMembersOrganization,
-    pullRequestLimit,
-  );
+
+  const { entity: teamEntity } = useEntity();
+  const catalogApi = useApi(catalogApiRef);
+  const graphql = useOctokitGraphQl();
+
+  const { loading, value } = useAsync(async () => {
+    const { repositories, teamMembers, teamMembersOrganization } =
+      await getUserRepositoriesAndTeam(teamEntity, catalogApi);
+
+    const { pullRequests, refreshPullRequests } = await getPullRequestsByTeam(
+      graphql,
+      repositories,
+      teamMembers,
+      teamMembersOrganization,
+      pullRequestLimit,
+    );
+
+    return {
+      repositories,
+      teamMembers,
+      pullRequests,
+      refreshPullRequests,
+    };
+  }, [pullRequestLimit, teamEntity]);
+
+  const repositories = value?.repositories ?? [];
+  const teamMembers = value?.teamMembers ?? [];
+  const pullRequests = value?.pullRequests ?? [];
+  const refreshPullRequests = value?.refreshPullRequests;
 
   const header = (
     <InfoCardHeader onRefresh={refreshPullRequests}>
@@ -77,7 +95,7 @@ const EntityTeamPullRequestsContent = (
   );
 
   const getContent = () => {
-    if (loadingReposAndTeam || loadingPRs) {
+    if (loading) {
       return <Progress />;
     }
 

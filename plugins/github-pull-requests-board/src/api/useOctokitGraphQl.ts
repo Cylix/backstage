@@ -23,7 +23,7 @@ import { readGitHubIntegrationConfigs } from '@backstage/integration';
 
 let octokit: any;
 
-export const useOctokitGraphQl = <T>() => {
+export const useOctokitGraphQl = () => {
   const auth = useApi(githubAuthApiRef);
   const config = useApi(configApiRef);
 
@@ -31,7 +31,7 @@ export const useOctokitGraphQl = <T>() => {
     config.getOptionalConfigArray('integrations.github') ?? [],
   )[0].apiBaseUrl;
 
-  return (path: string, options?: any): Promise<T> =>
+  return <T>(path: string, options?: any): Promise<T> =>
     auth
       .getAccessToken(['repo'])
       .then((token: string) => {

@@ -13,43 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from 'react';
-
 import { GraphQlPullRequests, PullRequestsNumber } from '../utils/types';
-import { useOctokitGraphQl } from './useOctokitGraphQl';
 
 const PULL_REQUEST_LIMIT = 10;
 const GITHUB_GRAPHQL_MAX_ITEMS = 100;
 
-export const useGetPullRequestsFromRepository = () => {
-  const graphql =
-    useOctokitGraphQl<GraphQlPullRequests<PullRequestsNumber[]>>();
+export const getPullRequestsFromRepository = (
+  graphql: <T>(path: string, options?: any) => Promise<T>,
+) => {
+  return async (
+    repo: string,
+    pullRequestLimit?: number,
+  ): Promise<PullRequestsNumber[]> => {
+    const limit = pullRequestLimit ?? PULL_REQUEST_LIMIT;
+    const [organisation, repositoryName] = repo.split('/');
 
-  const fn = React.useRef(
-    async (
-      repo: string,
-      pullRequestLimit?: number,
-    ): Promise<PullRequestsNumber[]> => {
-      const limit = pullRequestLimit ?? PULL_REQUEST_LIMIT;
-      const [organisation, repositoryName] = repo.split('/');
-
-      return await getPullRequestNodes(
-        graphql,
-        repositoryName,
-        organisation,
-        limit,
-      );
-    },
-  );
-
-  return fn.current;
+    return await getPullRequestNodes(
+      graphql,
+      repositoryName,
+      organisation,
+      limit,
+    );
+  };
 };
 
 async function getPullRequestNodes(
-  graphql: (
-    path: string,
-    options?: any,
-  ) => Promise<GraphQlPullRequests<PullRequestsNumber[]>>,
+  graphql: <T>(path: string, options?: any) => Promise<T>,
   repositoryName: string,
   organisation: string,
   pullRequestLimit: number,
@@ -58,7 +47,7 @@ async function getPullRequestNodes(
   let result: GraphQlPullRequests<PullRequestsNumber[]> | undefined = undefined;
 
   do {
-    result = await graphql(
+    result = await graphql<GraphQlPullRequests<PullRequestsNumber[]>>(
       `
         query (
           $name: String!
